@@ -22,18 +22,6 @@
             min-height: 100vh;
         }
 
-        h2 {
-            margin-bottom: 5px;
-            letter-spacing: 0.5px;
-            color: #ffffff;
-        }
-
-        .timestamp {
-            color: #888888;
-            font-size: 13px;
-            margin-bottom: 25px;
-        }
-
         .container {
             width: 100%;
             max-width: 900px;
@@ -82,7 +70,6 @@
             border-bottom: none;
         }
 
-        /* Row background highlights with forced white text */
         .row-bullish {
             background-color: #1d357a;
             color: #ffffff !important;
@@ -116,7 +103,6 @@
             text-transform: uppercase;
         }
 
-        /* Override bias spans to inherit pure white text */
         .bias-text {
             color: #ffffff !important;
         }
@@ -124,10 +110,6 @@
 </head>
 <body>
 
-    <h2>Forex Hybrid Matrix</h2>
-    <div class="timestamp">Last Updated: {{ last_updated }}</div>
-
-    <!-- Currency Output Table -->
     <div class="container">
         <table class="matrix-table">
             <thead>
