@@ -11,34 +11,17 @@ load_dotenv()
 app = Flask(__name__)
 
 PAIRS = [
-    "AUDCAD",
-    "AUDUSD",
-    "EURCAD",
-    "EURUSD",
-    "GBPCAD",
-    "AUDCHF",
-    "EURGBP",
-    "USDCAD",
-    "GBPUSD",
-    "EURCHF",
-    "GBPCHF",
-    "EURAUD",
-    "USDCHF",
-    "GBPAUD",
-    "CADCHF",
-    "AUDJPY",
-    "EURJPY",
-    "CHFJPY",
-    "GBPJPY",
-    "USDJPY",
-    "CADJPY",
+    "AUDCAD", "AUDUSD", "EURCAD", "EURUSD", "GBPCAD",
+    "AUDCHF", "EURGBP", "USDCAD", "GBPUSD", "EURCHF",
+    "GBPCHF", "EURAUD", "USDCHF", "GBPAUD", "CADCHF",
+    "AUDJPY", "EURJPY", "CHFJPY", "GBPJPY", "USDJPY", "CADJPY"
 ]
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 DB_KEYS = ["DB_USD", "DB_AUD", "DB_EUR", "DB_GBP", "DB_CAD", "DB_CHF", "DB_JPY"]
 
 cache = {"timestamp": 0, "data": []}
-CACHE_DURATION = 300
+CACHE_DURATION = 300  # Cache data for 5 minutes to prevent rate limits
 
 
 def get_notion_fundamentals():
@@ -97,54 +80,61 @@ def get_notion_fundamentals():
 
 
 def calculate_technical_scores():
-    tech_scores = {}
-    for symbol in PAIRS:
-        yf_symbol = f"{symbol}=X"
-        try:
-            df = yf.download(yf_symbol, period="1y", interval="1d", progress=False)
-            if df.empty or len(df) < 200:
-                tech_scores[symbol] = 0.0
-                continue
+    tech_scores = {symbol: 0.0 for symbol in PAIRS}
+    yf_symbols = [f"{symbol}=X" for symbol in PAIRS]
+    
+    try:
+        # Batch download all tickers in a single network request to avoid rate limits
+        data = yf.download(yf_symbols, period="1y", interval="1d", group_by="ticker", progress=False, threads=True)
+        
+        for symbol in PAIRS:
+            yf_symbol = f"{symbol}=X"
+            try:
+                df = data[yf_symbol] if len(PAIRS) > 1 else data
+                if df.empty or "Close" not in df.columns:
+                    continue
+                
+                close_prices = df["Close"].dropna()
+                if len(close_prices) < 200:
+                    continue
 
-            close_prices = df["Close"].squeeze()
+                ma20 = close_prices.rolling(window=20).mean().iloc[-1]
+                ma50 = close_prices.rolling(window=50).mean().iloc[-1]
+                ma100 = close_prices.rolling(window=100).mean().iloc[-1]
+                ma200 = close_prices.rolling(window=200).mean().iloc[-1]
+                current_price = close_prices.iloc[-1]
 
-            ma20 = close_prices.rolling(window=20).mean().iloc[-1]
-            ma50 = close_prices.rolling(window=50).mean().iloc[-1]
-            ma100 = close_prices.rolling(window=100).mean().iloc[-1]
-            ma200 = close_prices.rolling(window=200).mean().iloc[-1]
-            current_price = close_prices.iloc[-1]
+                score = 0.0
+                if current_price > ma20: score += 1.0
+                else: score -= 1.0
 
-            score = 0.0
-            if current_price > ma20: score += 1.0
-            else: score -= 1.0
+                if ma20 > ma50: score += 1.5
+                else: score -= 1.5
 
-            if ma20 > ma50: score += 1.5
-            else: score -= 1.5
+                if ma50 > ma100: score += 2.0
+                else: score -= 2.0
 
-            if ma50 > ma100: score += 2.0
-            else: score -= 2.0
+                if ma100 > ma200: score += 2.5
+                else: score -= 2.5
 
-            if ma100 > ma200: score += 2.5
-            else: score -= 2.5
-
-            tech_scores[symbol] = float(score)
-        except Exception as e:
-            print(f"[DEBUG] Error calculating technicals for {symbol}: {e}")
-            tech_scores[symbol] = 0.0
+                tech_scores[symbol] = float(score)
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"[DEBUG] Batch download error: {e}")
 
     return tech_scores
 
 
-def generate_combined_market_matrix(external_tech_scores=None):
+def generate_combined_market_matrix():
     global cache
     current_time = time.time()
 
+    # Serve from cache if valid to protect against rate limits
     if cache["data"] and (current_time - cache["timestamp"] < CACHE_DURATION):
         return cache["data"]
 
-    if external_tech_scores is None:
-        external_tech_scores = {symbol: 0.0 for symbol in PAIRS}
-
+    external_tech_scores = calculate_technical_scores()
     notion_currencies = get_notion_fundamentals()
     combined_results = []
 
@@ -190,11 +180,7 @@ def generate_combined_market_matrix(external_tech_scores=None):
 
 @app.route("/")
 def dashboard():
-    calculated_tech_scores = calculate_technical_scores()
-    
-    cache["timestamp"] = 0  # Force cache refresh so live scores update immediately
-
-    fresh_data = generate_combined_market_matrix(calculated_tech_scores)
+    fresh_data = generate_combined_market_matrix()
     update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     return render_template(
