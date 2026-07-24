@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forex Hybrid Matrix</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #191919 !important;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h2 {
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+        }
+
+        .timestamp {
+            color: #888888;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #212533;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            border: 1px solid #2e3545;
+        }
+
+        .matrix-table thead tr {
+            background-color: #1f2430;
+            color: #ffffff;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .matrix-table th, .matrix-table td {
+            padding: 14px 18px;
+            text-align: left;
+            color: #ffffff;
+        }
+
+        .matrix-table th:last-child, .matrix-table td:last-child {
+            text-align: right;
+        }
+
+        .matrix-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-weight: 500;
+            font-size: 15px;
+            color: #ffffff;
+        }
+
+        .matrix-table tbody tr:hover {
+            background-color: #252b38;
+        }
+
+        .matrix-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        /* Row background highlights with forced white text */
+        .row-bullish {
+            background-color: #1d357a;
+            color: #ffffff !important;
+        }
+
+        .row-bearish {
+            background-color: #701026;
+            color: #ffffff !important;
+        }
+
+        .row-neutral {
+            background-color: #374151;
+            color: #ffffff !important;
+        }
+
+        .symbol-col {
+            font-weight: 700;
+            color: #ffffff !important;
+            text-decoration: underline;
+        }
+
+        .table-header {
+            background-color: #1f2430;
+            text-align: center;
+            padding: 14px;
+            font-weight: bold;
+            font-size: 16px;
+            color: #ffffff;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #2e3545;
+            text-transform: uppercase;
+        }
+
+        /* Override bias spans to inherit pure white text */
+        .bias-text {
+            color: #ffffff !important;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Forex Hybrid Matrix</h2>
+    <div class="timestamp">Last Updated: {{ last_updated }}</div>
+
+    <!-- Currency Output Table -->
+    <div class="container">
+        <table class="matrix-table">
+            <thead>
+                <tr>
+                    <th colspan="5" class="table-header">Output</th>
+                </tr>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Tech Score</th>
+                    <th>Fund Score</th>
+                    <th>Bias</th>
+                    <th>Overall Score ▾</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in derived_pairs %}
+                <tr class="{% if 'Bullish' in row.bias %}row-bullish{% elif 'Bearish' in row.bias %}row-bearish{% else %}row-neutral{% endif %}">
+                    <td class="symbol-col">{{ row.symbol }}</td>
+                    <td style="color: #ffffff !important;">{{ row.tech_score }}</td>
+                    <td style="color: #ffffff !important;">{{ row.fund_score }}</td>
+                    <td><span class="bias-text">{{ row.bias }}</span></td>
+                    <td style="font-weight: bold; color: #ffffff !important;">{{ row.score }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
