@@ -101,18 +101,8 @@ def calculate_technical_scores():
     tech_scores = {}
     for symbol in PAIRS:
         yf_symbol = f"{symbol}=X"
-        df = pd.DataFrame()
-        
-        # Try fetching with a built-in retry mechanism if rate-limited
-        for attempt in range(2):
-            try:
-                df = yf.download(yf_symbol, period="1y", interval="1d", progress=False)
-                if not df.empty:
-                    break
-            except Exception:
-                time.sleep(2)
-
         try:
+            df = yf.download(yf_symbol, period="1y", interval="1d", progress=False)
             if df.empty or len(df) < 200:
                 tech_scores[symbol] = 0.0
                 continue
@@ -139,10 +129,6 @@ def calculate_technical_scores():
             else: score -= 2.5
 
             tech_scores[symbol] = float(score)
-            
-            # 1-second pause between pairs to prevent rate-limiting on Render
-            time.sleep(1.0)
-            
         except Exception as e:
             print(f"[DEBUG] Error calculating technicals for {symbol}: {e}")
             tech_scores[symbol] = 0.0
@@ -218,5 +204,4 @@ def dashboard():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(debug=True, port=5001)
