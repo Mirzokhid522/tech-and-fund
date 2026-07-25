@@ -99,41 +99,53 @@ def get_notion_fundamentals():
 
 def calculate_technical_scores():
     tech_scores = {}
-    for symbol in PAIRS:
-        yf_symbol = f"{symbol}=X"
-        try:
-            df = yf.download(yf_symbol, period="1y", interval="1d", progress=False, auto_adjust=False)
-            if df.empty or len(df) < 200:
+    yf_symbols = [f"{symbol}=X" for symbol in PAIRS]
+    
+    try:
+        # Download all pairs at once in a single bulk request to avoid rate limits
+        data = yf.download(yf_symbols, period="1y", interval="1d", progress=False, auto_adjust=False, group_by="ticker")
+        
+        for symbol in PAIRS:
+            yf_symbol = f"{symbol}=X"
+            try:
+                if len(PAIRS) == 1:
+                    df = data
+                else:
+                    df = data[yf_symbol] if yf_symbol in data.columns.levels[0] else pd.DataFrame()
+
+                if df.empty or "Close" not in df.columns or len(df.dropna(subset=["Close"])) < 200:
+                    tech_scores[symbol] = 0.0
+                    continue
+
+                close_prices = df["Close"].dropna().squeeze()
+
+                ma20 = close_prices.rolling(window=20).mean().iloc[-1]
+                ma50 = close_prices.rolling(window=50).mean().iloc[-1]
+                ma100 = close_prices.rolling(window=100).mean().iloc[-1]
+                ma200 = close_prices.rolling(window=200).mean().iloc[-1]
+                current_price = close_prices.iloc[-1]
+
+                score = 0.0
+                if current_price > ma20: score += 1.0
+                else: score -= 1.0
+
+                if ma20 > ma50: score += 1.5
+                else: score -= 1.5
+
+                if ma50 > ma100: score += 2.0
+                else: score -= 2.0
+
+                if ma100 > ma200: score += 2.5
+                else: score -= 2.5
+
+                tech_scores[symbol] = float(score)
+            except Exception as inner_e:
+                print(f"[DEBUG] Error processing {symbol}: {inner_e}")
                 tech_scores[symbol] = 0.0
-                continue
-
-            close_prices = df["Close"].squeeze()
-
-            ma20 = close_prices.rolling(window=20).mean().iloc[-1]
-            ma50 = close_prices.rolling(window=50).mean().iloc[-1]
-            ma100 = close_prices.rolling(window=100).mean().iloc[-1]
-            ma200 = close_prices.rolling(window=200).mean().iloc[-1]
-            current_price = close_prices.iloc[-1]
-
-            score = 0.0
-            if current_price > ma20: score += 1.0
-            else: score -= 1.0
-
-            if ma20 > ma50: score += 1.5
-            else: score -= 1.5
-
-            if ma50 > ma100: score += 2.0
-            else: score -= 2.0
-
-            if ma100 > ma200: score += 2.5
-            else: score -= 2.5
-
-            tech_scores[symbol] = float(score)
-            
-            # Brief pause between symbol requests to prevent API rate-limiting
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"[DEBUG] Error calculating technicals for {symbol}: {e}")
+                
+    except Exception as e:
+        print(f"[DEBUG] Bulk download error: {e}")
+        for symbol in PAIRS:
             tech_scores[symbol] = 0.0
 
     return tech_scores
@@ -196,7 +208,6 @@ def generate_combined_market_matrix(external_tech_scores=None):
 def dashboard():
     current_time = time.time()
     
-    # Use cached data if within the cache window, otherwise fetch and compute fresh data
     if cache["data"] and (current_time - cache["timestamp"] < CACHE_DURATION):
         fresh_data = cache["data"]
     else:
