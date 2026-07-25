@@ -129,6 +129,9 @@ def calculate_technical_scores():
             else: score -= 2.5
 
             tech_scores[symbol] = float(score)
+            
+            # Brief pause between symbol requests to prevent API rate-limiting
+            time.sleep(0.5)
         except Exception as e:
             print(f"[DEBUG] Error calculating technicals for {symbol}: {e}")
             tech_scores[symbol] = 0.0
@@ -191,11 +194,15 @@ def generate_combined_market_matrix(external_tech_scores=None):
 
 @app.route("/")
 def dashboard():
-    calculated_tech_scores = calculate_technical_scores()
+    current_time = time.time()
     
-    cache["timestamp"] = 0  # Force cache refresh so live scores update immediately
+    # Use cached data if within the cache window, otherwise fetch and compute fresh data
+    if cache["data"] and (current_time - cache["timestamp"] < CACHE_DURATION):
+        fresh_data = cache["data"]
+    else:
+        calculated_tech_scores = calculate_technical_scores()
+        fresh_data = generate_combined_market_matrix(calculated_tech_scores)
 
-    fresh_data = generate_combined_market_matrix(calculated_tech_scores)
     update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     return render_template(
