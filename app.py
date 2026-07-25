@@ -3,6 +3,7 @@ import os
 import time
 from dotenv import load_dotenv
 from flask import Flask, render_template
+import pandas as pd
 import requests
 import yfinance as yf
 
