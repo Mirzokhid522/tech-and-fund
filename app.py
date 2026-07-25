@@ -102,7 +102,7 @@ def calculate_technical_scores():
     for symbol in PAIRS:
         yf_symbol = f"{symbol}=X"
         try:
-            df = yf.download(yf_symbol, period="1y", interval="1d", progress=False)
+            df = yf.download(yf_symbol, period="1y", interval="1d", progress=False, auto_adjust=False)
             if df.empty or len(df) < 200:
                 tech_scores[symbol] = 0.0
                 continue
