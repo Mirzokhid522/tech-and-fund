@@ -47,12 +47,25 @@
 
         .matrix-table th, .matrix-table td {
             padding: 14px 18px;
-            text-align: left;
             color: #ffffff;
         }
 
-        .matrix-table th:last-child, .matrix-table td:last-child {
-            text-align: right;
+        /* Column Alignment Rules */
+        .matrix-table th:nth-child(1), .matrix-table td:nth-child(1) {
+            text-align: left; /* Symbol */
+        }
+
+        .matrix-table th:nth-child(2), .matrix-table td:nth-child(2),
+        .matrix-table th:nth-child(3), .matrix-table td:nth-child(3) {
+            text-align: center; /* Tech Score, Fund Score */
+        }
+
+        .matrix-table th:nth-child(4), .matrix-table td:nth-child(4) {
+            text-align: left; /* Bias */
+        }
+
+        .matrix-table th:nth-child(5), .matrix-table td:nth-child(5) {
+            text-align: right; /* Overall Score */
         }
 
         .matrix-table tbody tr {
